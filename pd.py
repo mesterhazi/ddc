@@ -22,7 +22,8 @@ class Decoder(srd.Decoder):
                     ('Register', 'Register name and offset'),
                     ('Fields', 'Readable register interpretation'),
                     ('Debug', 'Debug messages'))
-    annotation_rows = ( ('ddc', 'DDC', (0,1,2)),
+    annotation_rows = ( ('scdc', 'SCDC', (0,1,2)),
+                        ('hdcp', 'HDCP', ()),
                         ('debug', 'Debug', (3,)))
 
     def __init__(self):
@@ -34,19 +35,28 @@ class Decoder(srd.Decoder):
         self.offset = None  # offset is used in SCDC and HDCP register reads 
         self.protocol = None # 'scdc' or 'hdcp'
         self.databytes = [] # databytes
+        self.block_s = None  # start and end sample of a block
+        self.block_e = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def handle_scdc(self, addr, read_notwrite, data):
-        pass
-    
+    def handle_SCDC(self):
+        reg_name = SCDC_REG_LOOKUP[self.offset]['name']
+
     def handle_EDID(self, data):
         pass
 
     def handle_HDCP(self, addr, read_notwrite, data):
         pass
 
+    def handle_message(self):
+        if self.protocol == 'scdc':
+            self.handle_SCDC()
+        elif self.protocol == 'hdcp':
+            # self.handle_HDCP()
+            pass
+    
 
     def decode(self, ss, es, data):
         cmd, databyte = data
@@ -69,6 +79,7 @@ class Decoder(srd.Decoder):
             if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
                 # If address write is 0xA8 then SCDC and next byte is the offset
                 if cmd == 'ADDRESS WRITE' and databyte == 0xA8:
+                    self.put(self.ss, self.es, self.out_ann, [Annotations.address, ['SCDC write - Address : 0xA8']])
                     self.protocol = 'scdc'
                     self.state = States.GET_OFFSET
                 # if address write is 0x74 then HDCP and next byte is the offset
@@ -80,7 +91,8 @@ class Decoder(srd.Decoder):
                     self.protocol = 'hdcp'
                     self.state = States.READ_REGISTER
                 # if address read is 0xA9
-                elif cmd == 'ADDRESS READ' and databyte == 0xA9:
+                elif cmd == 'ADDRESS READ' and databyte == 0xA9:                    
+                    self.put(self.ss, self.es, self.out_ann, [Annotations.address, ['SCDC read - Address : 0xA9']])
                     self.protocol = 'scdc'
                     self.state = States.READ_REGISTER
                 # else:
@@ -90,7 +102,7 @@ class Decoder(srd.Decoder):
             if cmd == 'DATA WRITE':
                 # get offset after this either:
                 self.offset = databyte
-                self.put(self.ss, self.es, self.out_ann, [2, ['Offset: {:2x}'.format(databyte)]])
+                self.put(self.ss, self.es, self.out_ann, [2, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
                 self.state = States.OFFSET_RECEIVED
 
         elif self.state == States.OFFSET_RECEIVED:
@@ -104,10 +116,25 @@ class Decoder(srd.Decoder):
 
         elif self.state in (States.READ_REGISTER, States.WRITE_REGISTER):
             if cmd in ('DATA READ', 'DATA WRITE'):
+                self.read_or_write = cmd[5:]
                 self.databytes.append(databyte)
 
-            elif cmd == 'STOP':
+            elif cmd in ['STOP', 'START REPEAT']:
                 # TODO: Any output?
+                self.handle_message()
                 self.reset()
                 self.state = States.IDLE
 
+
+
+# SCDC register lookup
+SCDC_REG_LOOKUP = {
+    0x20 : {
+        'name' : 'TMDS Config',
+        'fields' : [
+            [0x1, {0x1 : 'Scrambling Enable: ENABLED', 0x0 : 'Scrambling Enable: DISABLED'}],
+            [0x2, {0x2 : 'TMDS_Bit_Clock_Ratio = 1/40', 0x0 : 'TMDS_Bit_Clock_Ratio = 1/10'}]
+        ]
+    }
+    
+}
