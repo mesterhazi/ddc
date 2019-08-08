@@ -42,7 +42,17 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_SCDC(self):
-        reg_name = SCDC_REG_LOOKUP[self.offset]['name']
+        messages = []
+        reg_val = self.databytes[0] # one byte registers expected
+        try:
+            for i in range(len(SCDC_REG_LOOKUP[self.offset]['fields'])):
+                # something is wrong here
+                mask = SCDC_REG_LOOKUP[self.offset]['fields'][i]['mask']
+                field_interpretation = SCDC_REG_LOOKUP[self.offset]['fields'][i][(reg_val & mask)]
+                messages.append(field_interpretation)
+            self.put(self.ss, self.ss, self.out_ann, [Annotations.fields, [messages[0]]])
+        except:
+            pass
 
     def handle_EDID(self, data):
         pass
@@ -102,7 +112,10 @@ class Decoder(srd.Decoder):
             if cmd == 'DATA WRITE':
                 # get offset after this either:
                 self.offset = databyte
-                self.put(self.ss, self.es, self.out_ann, [2, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
+                try:
+                    self.put(self.ss, self.es, self.out_ann, [2, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
+                except KeyError:
+                    self.put(self.ss, self.es, self.out_ann, [2, ['Unknown Register (0x{:2x})'.format(databyte)]])
                 self.state = States.OFFSET_RECEIVED
 
         elif self.state == States.OFFSET_RECEIVED:
@@ -110,7 +123,7 @@ class Decoder(srd.Decoder):
             if cmd == 'START REPEAT':
                 self.state = States.GET_SLAVE_ADDR
             # - another data byte - register write
-            elif cmd == 'DATA WRITE':
+            elif cmd == 'DATA WRITE': 
                 self.databytes.append(databyte)
                 self.state = States.WRITE_REGISTER                
 
@@ -132,9 +145,8 @@ SCDC_REG_LOOKUP = {
     0x20 : {
         'name' : 'TMDS Config',
         'fields' : [
-            [0x1, {0x1 : 'Scrambling Enable: ENABLED', 0x0 : 'Scrambling Enable: DISABLED'}],
-            [0x2, {0x2 : 'TMDS_Bit_Clock_Ratio = 1/40', 0x0 : 'TMDS_Bit_Clock_Ratio = 1/10'}]
+            { 'mask' : 0x1, 'interpretation' : {0x1 : 'Scrambling Enable: ENABLED', 0x0 : 'Scrambling Enable: DISABLED'}},
+            { 'mask' : 0x2, 'interpretation' : {0x2 : 'TMDS_Bit_Clock_Ratio = 1/40', 0x0 : 'TMDS_Bit_Clock_Ratio = 1/10'}}
         ]
-    }
-    
+    }    
 }
