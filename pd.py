@@ -48,9 +48,10 @@ class Decoder(srd.Decoder):
             for i in range(len(SCDC_REG_LOOKUP[self.offset]['fields'])):
                 # something is wrong here
                 mask = SCDC_REG_LOOKUP[self.offset]['fields'][i]['mask']
-                field_interpretation = SCDC_REG_LOOKUP[self.offset]['fields'][i][(reg_val & mask)]
+                field_interpretation = SCDC_REG_LOOKUP[self.offset]['fields'][i]['interpretation'][(reg_val & mask)]
                 messages.append(field_interpretation)
-            self.put(self.ss, self.ss, self.out_ann, [Annotations.fields, [messages[0]]])
+                
+            self.put(self.ss, self.es, self.out_ann, [Annotations.fields, ['\n'.join(messages)]])
         except:
             pass
 
@@ -125,16 +126,18 @@ class Decoder(srd.Decoder):
             # - another data byte - register write
             elif cmd == 'DATA WRITE': 
                 self.databytes.append(databyte)
-                self.state = States.WRITE_REGISTER                
+                self.state = States.WRITE_REGISTER
+                
+                self.handle_message()                
 
         elif self.state in (States.READ_REGISTER, States.WRITE_REGISTER):
             if cmd in ('DATA READ', 'DATA WRITE'):
                 self.read_or_write = cmd[5:]
                 self.databytes.append(databyte)
+                
 
             elif cmd in ['STOP', 'START REPEAT']:
                 # TODO: Any output?
-                self.handle_message()
                 self.reset()
                 self.state = States.IDLE
 
@@ -145,7 +148,7 @@ SCDC_REG_LOOKUP = {
     0x20 : {
         'name' : 'TMDS Config',
         'fields' : [
-            { 'mask' : 0x1, 'interpretation' : {0x1 : 'Scrambling Enable: ENABLED', 0x0 : 'Scrambling Enable: DISABLED'}},
+            { 'mask' : 0x1, 'interpretation' : {0x1 : 'Scrambling Enable = ENABLED', 0x0 : 'Scrambling Enable = DISABLED'}},
             { 'mask' : 0x2, 'interpretation' : {0x2 : 'TMDS_Bit_Clock_Ratio = 1/40', 0x0 : 'TMDS_Bit_Clock_Ratio = 1/10'}}
         ]
     }    
