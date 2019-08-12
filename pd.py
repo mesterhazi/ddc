@@ -56,7 +56,7 @@ class Decoder(srd.Decoder):
                 except KeyError:
                     messages.append('Unexpected value in register with mask:{}'.format(mask))
                 
-            self.put(self.ss, self.es, self.out_ann, [Annotations.fields, ['\n'.join(messages)]])
+            self.put(self.ss, self.es, self.out_ann, [Annotations.fields, [' | '.join(messages)]])
         except:
             pass
         if self.offset in [0x50, 0x51, 0x52, 0x53, 0x54, 0x55]:  # Err det registers shall be read without setting new offset explicitly
@@ -69,12 +69,13 @@ class Decoder(srd.Decoder):
                 channel = int ((self.offset - 0x51) / 2) # 0x51 is CH0, 0x53 is CH1, 0x55 is CH2
                 messages.append('Channel {} Error Counter = {}'.format(channel, error_counter))
                 messages.append('Ch{}_Valid = {}'.format(channel, reg_val >> 7))
-                self.put(self.block_s, self.es, self.out_ann, [Annotations.fields, ['\n'.join(messages)]])
+                self.put(self.block_s, self.es, self.out_ann, [Annotations.fields, [' | '.join(messages)]])
 
             elif self.offset == 0x56:
                 self.put(self.ss, self.es, self.out_ann, [Annotations.fields, ['Checksum of Character Error Detection registers']])
             
             self.offset += 1 # jump to the next Err det register
+            
     def handle_EDID(self, data):
         pass
 
