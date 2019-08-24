@@ -8,22 +8,19 @@ class Annotations:
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'ddc'
-    name = 'DDC'
-    longname = 'DISPLAY DATA CHANNEL'
-    desc = """DISPLAY DATA CHANNEL:
-    SCDC: Status and Control Data Channel for HDMI2.0
-    EDID: 
-    HDCP:"""
+    id = 'scdc'
+    name = 'SCDC'
+    longname = 'Status and Control Data Channel'
+    desc = """Status and Control Data Channel:
+    SCDC: Status and Control Data Channel for HDMI2.0 transmitted over Display Data Channel"""
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['ddc']
+    outputs = ['scdc']
     annotations = ( ('Address', 'I²C address'),
                     ('Register', 'Register name and offset'),
                     ('Fields', 'Readable register interpretation'),
                     ('Debug', 'Debug messages'))
     annotation_rows = ( ('scdc', 'SCDC', (0,1,2)),
-                        ('hdcp', 'HDCP', ()),
                         ('debug', 'Debug', (3,)))
 
     def __init__(self):
@@ -33,7 +30,7 @@ class Decoder(srd.Decoder):
         self.state = States.IDLE # I2C channel state
         self.reg = None     # actual register address
         self.offset = None  # offset is used in SCDC and HDCP register reads 
-        self.protocol = None # 'scdc' or 'hdcp'
+        self.protocol = None # 'scdc'
         self.databytes = [] # databytes
         self.err_det_lower = None # for Character_Error_Detection registers this is the lower 7bits of the error value
         self.block_s = None  # start and end sample of a block
@@ -85,8 +82,7 @@ class Decoder(srd.Decoder):
     def handle_message(self):
         if self.protocol == 'scdc':
             self.handle_SCDC()
-        elif self.protocol == 'hdcp':
-            # self.handle_HDCP()
+        else:
             pass
     
 
@@ -114,31 +110,22 @@ class Decoder(srd.Decoder):
                     self.put(self.ss, self.es, self.out_ann, [Annotations.address, ['SCDC write - Address : 0xA8']])
                     self.protocol = 'scdc'
                     self.state = States.GET_OFFSET
-                # if address write is 0x74 then HDCP and next byte is the offset
-                elif cmd == 'ADDRESS WRITE' and databyte == 0x74:
-                    self.protocol = 'hdcp'
-                    self.state = States.GET_OFFSET
-                # if address read is 0x75 then it is a HDCP reg read
-                elif cmd == 'ADDRESS READ' and databyte == 0x75:
-                    self.protocol = 'hdcp'
-                    self.state = States.READ_REGISTER
                 # if address read is 0xA9
                 elif cmd == 'ADDRESS READ' and databyte == 0xA9:                    
                     self.put(self.ss, self.es, self.out_ann, [Annotations.address, ['SCDC read - Address : 0xA9']])
                     self.protocol = 'scdc'
                     self.state = States.READ_REGISTER
-                # else:
-                #     self.state = cmd[8:] + ' REGS' # READ REGS / WRITE REGS
-
+                
         elif self.state == States.GET_OFFSET:
             if cmd == 'DATA WRITE':
-                # get offset after this either:
-                self.offset = databyte
-                try:
-                    self.put(self.ss, self.es, self.out_ann, [2, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
-                except KeyError:
-                    self.put(self.ss, self.es, self.out_ann, [2, ['Unknown Register (0x{:2x})'.format(databyte)]])
-                self.state = States.OFFSET_RECEIVED
+                if self.protocol == 'scdc':
+                    # get offset after this either:
+                    self.offset = databyte
+                    try:
+                        self.put(self.ss, self.es, self.out_ann, [2, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
+                    except KeyError:
+                        self.put(self.ss, self.es, self.out_ann, [2, ['Unknown Register (0x{:2x})'.format(databyte)]])
+                    self.state = States.OFFSET_RECEIVED
 
         elif self.state == States.OFFSET_RECEIVED:
             # - START REPEAT comes - register read
