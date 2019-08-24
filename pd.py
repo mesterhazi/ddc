@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
             for i in range(len(SCDC_REG_LOOKUP[self.offset]['fields'])):
                 mask = SCDC_REG_LOOKUP[self.offset]['fields'][i]['mask']
                 try:
-                    field_interpretation = SCDC_REG_LOOKUP[self.offset]['fields'][i]['interpretation'][(reg_val & mask)]
+                    field_interpretation = SCDC_REG_LOOKUP[self.offset]['j'][i]['interpretation'][(reg_val & mask)]
                     messages.append(field_interpretation)
                 except TypeError:
                     messages.append(SCDC_REG_LOOKUP[self.offset]['fields'][i]['interpretation'] + str(reg_val))
@@ -122,9 +122,9 @@ class Decoder(srd.Decoder):
                     # get offset after this either:
                     self.offset = databyte
                     try:
-                        self.put(self.ss, self.es, self.out_ann, [2, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
+                        self.put(self.ss, self.es, self.out_ann, [Annotations.register, ['Register: {} (0x{:2x})'.format(SCDC_REG_LOOKUP[self.offset]['name'], databyte)]])
                     except KeyError:
-                        self.put(self.ss, self.es, self.out_ann, [2, ['Unknown Register (0x{:2x})'.format(databyte)]])
+                        self.put(self.ss, self.es, self.out_ann, [Annotations.register, ['Unknown Register (0x{:2x})'.format(databyte)]])
                     self.state = States.OFFSET_RECEIVED
 
         elif self.state == States.OFFSET_RECEIVED:
