@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
             for i in range(len(SCDC_REG_LOOKUP[self.offset]['fields'])):
                 mask = SCDC_REG_LOOKUP[self.offset]['fields'][i]['mask']
                 try:
-                    field_interpretation = SCDC_REG_LOOKUP[self.offset]['j'][i]['interpretation'][(reg_val & mask)]
+                    field_interpretation = SCDC_REG_LOOKUP[self.offset]['fields'][i]['interpretation'][(reg_val & mask)]
                     messages.append(field_interpretation)
                 except TypeError:
                     messages.append(SCDC_REG_LOOKUP[self.offset]['fields'][i]['interpretation'] + str(reg_val))
