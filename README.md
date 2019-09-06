@@ -7,4 +7,5 @@ Usage:
 2. Load PulseView
 3. Add I2C protocol decoder
 4. Open I2C protocol decoder settings
-5. Select "scdc" at the "stack decoder" dropdown menü
+5. Set Displayed slave address format to unshifted
+6. Select "scdc" at the "stack decoder" dropdown menü
