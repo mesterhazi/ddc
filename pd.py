@@ -17,7 +17,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['scdc']
     options = (
-        {'id': 'verbosity', 'desc': 'default: only register names | long: register names + explanations | debug: same as long + statemachine + i2c transactions ',
+        {'id': 'verbosity', 'desc': 'Verbosity',
         'default': 'short', 'values': ('short', 'long', 'debug')},
     )
     annotations = ( ('Address', 'I²C address'),
@@ -167,6 +167,7 @@ SCDC_REG_LOOKUP = {
         'fields' : [  # Use 'fields' as bitfields in the register
             {'mask' : 0xFF, # Use 'mask' as the to select the bitfield
              'interpretation' :     # Use 'interpretation' to interpret the different bitfield values to human readable format
+                                    # the interpretation for every value consists of a short and a long explanation as the 1st and 2nd element of a list
                                     {0x01 : ['Always 0x01 for HDMI2.0 compliant sinks', '']} 
                                     # If the bitfield is not discrete value instead of the dict a Prefix string can be added
             }   ]
