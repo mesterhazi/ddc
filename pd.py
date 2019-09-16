@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
 
     def handle_SCDC(self):
         messages = []
-        reg_val = self.databytes[0] # one byte registers expected
+        reg_val = self.databytes[-1] # one byte registers expected
         try:
             for i in range(len(SCDC_REG_LOOKUP[self.offset]['fields'])):
                 mask = SCDC_REG_LOOKUP[self.offset]['fields'][i]['mask']
