@@ -100,7 +100,12 @@ class Decoder(srd.Decoder):
         self.es = es
         if self.options['verbosity'] == 'debug':
             self.put(self.ss, self.es, self.out_ann, [Annotations.debug, [str(self.state) + ' ' + cmd]])
+            
         # State machine.
+        if cmd in ['STOP']:
+            self.reset()
+            self.state = States.IDLE
+
         if self.state == States.IDLE:
             # Wait for an I²C START condition.
             if cmd != 'START':
@@ -156,6 +161,8 @@ class Decoder(srd.Decoder):
                 # TODO: Any output?
                 self.reset()
                 self.state = States.IDLE
+        
+
 
 
 
