@@ -182,8 +182,8 @@ SCDC_REG_LOOKUP = {
     0x02 : {
         'name' : 'Source version - RW',
         'fields' : [
-            { 'mask' : 0xFF, 'interpretation' : {   0x01 : ['Sink version = 1', ' - The Source is supporting HDMI2.0 SCDC registers'], 
-                                                    0x00 : ['Sink version = 0', ' - The Source is supporting HDMI2.0 SCDC registers']}}]
+            { 'mask' : 0xFF, 'interpretation' : {   0x01 : ['Source version = 1', ' - The Source is supporting HDMI2.0 SCDC registers'], 
+                                                    0x00 : ['Source version = 0', ' - The Source is supporting HDMI2.0 SCDC registers']}}]
     },
     0x10 : {
         'name' : 'Update_0 - R',
